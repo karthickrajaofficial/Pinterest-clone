@@ -5,7 +5,7 @@ import cookieParser from "cookie-parser";
 import cloudinary from "cloudinary";
 import path from "path";
 import cors from "cors";
-
+import helmet from "helmet";
 
 dotenv.config();
 
@@ -16,28 +16,37 @@ cloudinary.v2.config({
 });
 
 const app = express();
-
 const port = process.env.PORT;
 
-//using middlewares
+
+app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors());
-// importing routes
+app.use(cors({ origin: "*", credentials: true })); // Adjust as needed
+
+
+app.use((req, res, next) => {
+  if (req.headers['x-forwarded-proto'] !== 'https') {
+    return res.redirect(`https://${req.headers.host}${req.url}`);
+  }
+  next();
+});
+
+
 import userRoutes from "./routes/userRoutes.js";
 import pinRoutes from "./routes/pinRoutes.js";
 
-// using routes
 app.use("/api/user", userRoutes);
 app.use("/api/pin", pinRoutes);
 
-const __dirname = path.resolve();
 
+const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, "/frontend/dist")));
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
 });
+
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
