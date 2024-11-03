@@ -18,20 +18,36 @@ cloudinary.v2.config({
 const app = express();
 const port = process.env.PORT;
 
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["*"],
+        scriptSrc: ["*"],
+        imgSrc: ["*"],
+        styleSrc: ["*"],
+        fontSrc: ["*"],
+        connectSrc: ["*"],
+        mediaSrc: ["*"],
+        objectSrc: ["*"],
+        frameSrc: ["*"],
+      },
+    },
+  })
+);
 
-app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
-app.use(cors({ origin: "*", credentials: true })); // Adjust as needed
+app.use(cors({ origin: "*", credentials: true }));
 
-
-app.use((req, res, next) => {
-  if (req.headers['x-forwarded-proto'] !== 'https') {
-    return res.redirect(`https://${req.headers.host}${req.url}`);
-  }
-  next();
-});
-
+if (process.env.NODE_ENV === "production") {
+  app.use((req, res, next) => {
+    if (req.headers["x-forwarded-proto"] !== "https") {
+      return res.redirect(`https://${req.headers.host}${req.url}`);
+    }
+    next();
+  });
+}
 
 import userRoutes from "./routes/userRoutes.js";
 import pinRoutes from "./routes/pinRoutes.js";
@@ -39,14 +55,12 @@ import pinRoutes from "./routes/pinRoutes.js";
 app.use("/api/user", userRoutes);
 app.use("/api/pin", pinRoutes);
 
-
 const __dirname = path.resolve();
 app.use(express.static(path.join(__dirname, "/frontend/dist")));
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
 });
-
 
 app.listen(port, () => {
   console.log(`Server is running on http://localhost:${port}`);
